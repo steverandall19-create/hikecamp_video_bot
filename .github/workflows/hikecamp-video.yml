@@ -1,0 +1,76 @@
+name: Generate and Upload HikeCamp YouTube Video
+
+on:
+  repository_dispatch:
+    types: [build_hikecamp_video]
+
+jobs:
+  create_and_upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Download Images (With Fallback)
+        run: |
+          # 1. Download the 4 main photos
+          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.image_1 }}" -o 1.jpg
+          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.image_2 }}" -o 2.jpg || cp 1.jpg 2.jpg
+          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.image_3 }}" -o 3.jpg || cp 1.jpg 3.jpg
+          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.image_4 }}" -o 4.jpg || cp 1.jpg 4.jpg
+          
+          # 2. Download the generated OpenStreetMap tile
+          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.map_image }}" -o 5.jpg || cp 1.jpg 5.jpg
+          
+          # 3. Download the specific boot or tent overlay graphic
+          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.overlay_graphic }}" -o icon.png
+          
+          # 4. Download your main transparent WebP logo from your site
+          curl -L -A "Mozilla/5.0" "https://hikecamp.co.uk/images/HikeCamp-Logo-trans.webp" -o logo.webp
+
+      - name: Render 5-Image Cinematic Video
+        run: |
+          ffmpeg \
+          -loop 1 -i 1.jpg \
+          -loop 1 -i 2.jpg \
+          -loop 1 -i 3.jpg \
+          -loop 1 -i 4.jpg \
+          -loop 1 -i 5.jpg \
+          -loop 1 -i logo.webp \
+          -loop 1 -i icon.png \
+          -f lavfi -i anullsrc=r=44100:cl=stereo \
+          -filter_complex "\
+          [0:v]scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,zoompan=z='zoom+0.0004':d=150:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30[v0]; \
+          [1:v]scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,zoompan=z='zoom+0.0004':d=150:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30[v1]; \
+          [2:v]scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,zoompan=z='zoom+0.0004':d=150:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30[v2]; \
+          [3:v]scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,zoompan=z='zoom+0.0004':d=150:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30[v3]; \
+          [4:v]scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,zoompan=z='zoom+0.0004':d=150:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30[v4]; \
+          [v0][v1]xfade=transition=fade:duration=1:offset=4[xf1]; \
+          [xf1][v2]xfade=transition=fade:duration=1:offset=8[xf2]; \
+          [xf2][v3]xfade=transition=fade:duration=1:offset=12[xf3]; \
+          [xf3][v4]xfade=transition=fade:duration=1:offset=16[bg]; \
+          [5:v]scale=600:-1,format=rgba,fade=t=out:st=3.5:d=1.5:alpha=1[intro_logo]; \
+          [6:v]scale=150:-1,format=rgba[corner_icon]; \
+          [bg][intro_logo]overlay=(W-w)/2:(H-h)/2[with_logo]; \
+          [with_logo][corner_icon]overlay=W-w-50:H-h-50,format=yuv420p[out]" \
+          -map "[out]" -map 7:a -c:v libx264 -t 21 -r 30 -c:a aac -shortest output.mp4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install google-auth google-auth-oauthlib google-api-python-client requests
+
+      - name: Upload to YouTube
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          VIDEO_TITLE: ${{ github.event.client_payload.title }}
+          VIDEO_DESCRIPTION: ${{ github.event.client_payload.description }}
+        run: python .github/workflows/upload.py
