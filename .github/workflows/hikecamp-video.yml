@@ -14,7 +14,7 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-   - name: Download Images (With Fallback)
+      - name: Download Images (With Fallback)
         run: |
           # 1. Download the 4 main trail photos
           curl -L -A "HikeCampVideoBot/1.0 (https://hikecamp.co.uk)" "${{ github.event.client_payload.image_1 }}" -o 1.jpg
