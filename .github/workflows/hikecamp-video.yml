@@ -14,25 +14,25 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Download Images (With Fallback)
+   - name: Download Images (With Fallback)
         run: |
           # 1. Download the 4 main trail photos
-          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.image_1 }}" -o 1.jpg
-          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.image_2 }}" -o 2.jpg || cp 1.jpg 2.jpg
-          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.image_3 }}" -o 3.jpg || cp 1.jpg 3.jpg
-          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.image_4 }}" -o 4.jpg || cp 1.jpg 4.jpg
+          curl -L -A "HikeCampVideoBot/1.0 (https://hikecamp.co.uk)" "${{ github.event.client_payload.image_1 }}" -o 1.jpg
+          curl -L -A "HikeCampVideoBot/1.0 (https://hikecamp.co.uk)" "${{ github.event.client_payload.image_2 }}" -o 2.jpg || cp 1.jpg 2.jpg
+          curl -L -A "HikeCampVideoBot/1.0 (https://hikecamp.co.uk)" "${{ github.event.client_payload.image_3 }}" -o 3.jpg || cp 1.jpg 3.jpg
+          curl -L -A "HikeCampVideoBot/1.0 (https://hikecamp.co.uk)" "${{ github.event.client_payload.image_4 }}" -o 4.jpg || cp 1.jpg 4.jpg
           
-          # 2. Download the map image
-          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.map_image }}" -o 5.jpg || cp 1.jpg 5.jpg
+          # 2. Download the map image (using a compliant User-Agent for OSM)
+          curl -L -A "HikeCampVideoBot/1.0 (https://hikecamp.co.uk)" "${{ github.event.client_payload.map_image }}" -o 5.jpg || cp 1.jpg 5.jpg
           
           # 3. Download the product/boot image
-          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.product_image }}" -o prod.jpg || cp 1.jpg prod.jpg
+          curl -L -A "HikeCampVideoBot/1.0 (https://hikecamp.co.uk)" "${{ github.event.client_payload.product_image }}" -o prod.jpg || cp 1.jpg prod.jpg
           
           # 4. Download your main transparent WebP logo
-          curl -L -A "Mozilla/5.0" "https://hikecamp.co.uk/images/HikeCamp-Logo-trans.webp" -o logo.webp
+          curl -L -A "HikeCampVideoBot/1.0 (https://hikecamp.co.uk)" "https://hikecamp.co.uk/images/HikeCamp-Logo-trans.webp" -o logo.webp
           
           # 5. Download the specific boot or tent overlay graphic
-          curl -L -A "Mozilla/5.0" "${{ github.event.client_payload.overlay_graphic }}" -o icon.png
+          curl -L -A "HikeCampVideoBot/1.0 (https://hikecamp.co.uk)" "${{ github.event.client_payload.overlay_graphic }}" -o icon.png
 
       - name: Render 6-Image Cinematic Video
         run: |
